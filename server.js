@@ -1,18 +1,23 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import getSqlConnection from './lib/db';
-import Promise from 'bluebird';
 import path from 'path';
 import authenticate from './lib/userFunctions';
 import bodyParser from 'body-parser';
 import passport from 'passport';
 import passportJWT from 'passport-jwt';
 import jwt from 'jsonwebtoken';
-
+import admin from './lib/adminFunctions'
 
 let app = express();
+
+// sockets
+let http = require('http').Server(app);
+let io = require('socket.io')(http);
+
+// Library Objects
 let auth = new authenticate();
+let administration = new admin();
 
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
@@ -56,6 +61,7 @@ passport.use(strategy);
 
 // API Should be listening on 2000 at all times
 app.listen(2000);
+http.listen(2001);
 
 /**
  * app post.
@@ -81,61 +87,46 @@ app.post('/login', (req, res) => {
                 })
             }
         })
+    } else {
+        res.send({
+            message: 'bad',
+            error: 'Username or Password not found.'
+        })
     }
 });
 
-app.get('/secret', passport.authenticate('jwt', {session: false}), (req, res) => {
+app.get('/dashboard', passport.authenticate('jwt', {session: false}), (req, res) => {
     res.send('Success');
 });
 
+// Users
+app.get('/userList', passport.authenticate('jwt', {session: false}), (req, res) => {
+    administration.getUserList().then((_res) => {
+        res.send(_res);
+    });
+});
+
+app.post('/registerUser', passport.authenticate('jwt', {session: false}), (req, res) => {
+
+    let email = req.body.email;
+    let password = req.body.password;
+
+    if (email && password) {
+        auth.registerUser(email, password).then((_res) => {
+            res.send(_res)
+        })
+    } else {
+        res.send("Something went wrong...")
+    }
+});
 
 /**
- * test
- **/
+ * Sockets Here.
+ */
+io.on('connection', (socket) => {
 
-// getAccount().then((res) => {
-//     console.log(res, ' Successful Test.');
-// });
-
-function getAccount() {
-    return Promise.using(getSqlConnection(), (connection) => {
-        return connection.query('Select * from accounts').then((res) => {
-            return res;
-        });
-    });
-}
-
-// testDuplicateName();
-
-
-function testDuplicateName() {
-    auth.checkForDuplicateAccount('uno').then((res) => {
-        console.log(res);
-    });
-}
-
-// createAccount();
-
-function createAccount() {
-    auth.registerUser('alonso@gmail.com', '123test').then((res) => {
-        console.log(res);
-    });
-}
-
-// encryptPassword();
-
-function encryptPassword() {
-    auth.encryptPassword('lala').then((res) => {
-        console.log(res);
-    })
-}
-
-// loginUser();
-
-function loginUser() {
-
-    auth.login('alonso@gmail.com', '123test').then((res) => {
-        console.log(res);
+    socket.on('test', (data) => {
+        console.log(data.hello)
     })
 
-}
+});
