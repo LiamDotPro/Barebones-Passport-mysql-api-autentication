@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import getSqlConnection from './lib/db';
-import Promise from 'bluebird';
 import path from 'path';
 import authenticate from './lib/userFunctions';
 import bodyParser from 'body-parser';
@@ -10,8 +8,12 @@ import passport from 'passport';
 import passportJWT from 'passport-jwt';
 import jwt from 'jsonwebtoken';
 
-
 let app = express();
+
+// sockets
+let http = require('http').Server(app);
+let io = require('socket.io')(http);
+
 let auth = new authenticate();
 
 
@@ -88,54 +90,13 @@ app.get('/secret', passport.authenticate('jwt', {session: false}), (req, res) =>
     res.send('Success');
 });
 
-
 /**
- * test
- **/
+ * Sockets Here.
+ */
+io.on('connection', (socket) => {
 
-// getAccount().then((res) => {
-//     console.log(res, ' Successful Test.');
-// });
-
-function getAccount() {
-    return Promise.using(getSqlConnection(), (connection) => {
-        return connection.query('Select * from accounts').then((res) => {
-            return res;
-        });
-    });
-}
-
-// testDuplicateName();
-
-
-function testDuplicateName() {
-    auth.checkForDuplicateAccount('uno').then((res) => {
-        console.log(res);
-    });
-}
-
-// createAccount();
-
-function createAccount() {
-    auth.registerUser('alonso@gmail.com', '123test').then((res) => {
-        console.log(res);
-    });
-}
-
-// encryptPassword();
-
-function encryptPassword() {
-    auth.encryptPassword('lala').then((res) => {
-        console.log(res);
-    })
-}
-
-// loginUser();
-
-function loginUser() {
-
-    auth.login('alonso@gmail.com', '123test').then((res) => {
-        console.log(res);
+    socket.on('test', (data) => {
+        console.log(data.hello)
     })
 
-}
+});

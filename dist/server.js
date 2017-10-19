@@ -12,14 +12,6 @@ var _morgan = require('morgan');
 
 var _morgan2 = _interopRequireDefault(_morgan);
 
-var _db = require('./lib/db');
-
-var _db2 = _interopRequireDefault(_db);
-
-var _bluebird = require('bluebird');
-
-var _bluebird2 = _interopRequireDefault(_bluebird);
-
 var _path = require('path');
 
 var _path2 = _interopRequireDefault(_path);
@@ -47,6 +39,11 @@ var _jsonwebtoken2 = _interopRequireDefault(_jsonwebtoken);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var app = (0, _express2.default)();
+
+// sockets
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+
 var auth = new _userFunctions2.default();
 
 app.use('/public', _express2.default.static(_path2.default.join(__dirname, 'public')));
@@ -122,52 +119,12 @@ app.get('/secret', _passport2.default.authenticate('jwt', { session: false }), f
 });
 
 /**
- * test
- **/
+ * Sockets Here.
+ */
+io.on('connection', function (socket) {
 
-// getAccount().then((res) => {
-//     console.log(res, ' Successful Test.');
-// });
-
-function getAccount() {
-    return _bluebird2.default.using((0, _db2.default)(), function (connection) {
-        return connection.query('Select * from accounts').then(function (res) {
-            return res;
-        });
+    socket.on('test', function (data) {
+        console.log(data.hello);
     });
-}
-
-// testDuplicateName();
-
-
-function testDuplicateName() {
-    auth.checkForDuplicateAccount('uno').then(function (res) {
-        console.log(res);
-    });
-}
-
-// createAccount();
-
-function createAccount() {
-    auth.registerUser('alonso@gmail.com', '123test').then(function (res) {
-        console.log(res);
-    });
-}
-
-// encryptPassword();
-
-function encryptPassword() {
-    auth.encryptPassword('lala').then(function (res) {
-        console.log(res);
-    });
-}
-
-// loginUser();
-
-function loginUser() {
-
-    auth.login('alonso@gmail.com', '123test').then(function (res) {
-        console.log(res);
-    });
-}
+});
 //# sourceMappingURL=server.js.map
