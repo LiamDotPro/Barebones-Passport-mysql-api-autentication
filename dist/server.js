@@ -36,6 +36,10 @@ var _jsonwebtoken = require('jsonwebtoken');
 
 var _jsonwebtoken2 = _interopRequireDefault(_jsonwebtoken);
 
+var _adminFunctions = require('./lib/adminFunctions');
+
+var _adminFunctions2 = _interopRequireDefault(_adminFunctions);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var app = (0, _express2.default)();
@@ -44,7 +48,9 @@ var app = (0, _express2.default)();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
+// Library Objects
 var auth = new _userFunctions2.default();
+var administration = new _adminFunctions2.default();
 
 app.use('/public', _express2.default.static(_path2.default.join(__dirname, 'public')));
 
@@ -86,6 +92,7 @@ _passport2.default.use(strategy);
 
 // API Should be listening on 2000 at all times
 app.listen(2000);
+http.listen(2001);
 
 /**
  * app post.
@@ -111,11 +118,37 @@ app.post('/login', function (req, res) {
                 });
             }
         });
+    } else {
+        res.send({
+            message: 'bad',
+            error: 'Username or Password not found.'
+        });
     }
 });
 
-app.get('/secret', _passport2.default.authenticate('jwt', { session: false }), function (req, res) {
+app.get('/dashboard', _passport2.default.authenticate('jwt', { session: false }), function (req, res) {
     res.send('Success');
+});
+
+// Users
+app.get('/userList', _passport2.default.authenticate('jwt', { session: false }), function (req, res) {
+    administration.getUserList().then(function (_res) {
+        res.send(_res);
+    });
+});
+
+app.post('/registerUser', _passport2.default.authenticate('jwt', { session: false }), function (req, res) {
+
+    var email = req.body.email;
+    var password = req.body.password;
+
+    if (email && password) {
+        auth.registerUser(email, password).then(function (_res) {
+            res.send(_res);
+        });
+    } else {
+        res.send("Something went wrong...");
+    }
 });
 
 /**

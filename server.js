@@ -7,6 +7,7 @@ import bodyParser from 'body-parser';
 import passport from 'passport';
 import passportJWT from 'passport-jwt';
 import jwt from 'jsonwebtoken';
+import admin from './lib/adminFunctions'
 
 let app = express();
 
@@ -14,7 +15,9 @@ let app = express();
 let http = require('http').Server(app);
 let io = require('socket.io')(http);
 
+// Library Objects
 let auth = new authenticate();
+let administration = new admin();
 
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
@@ -58,6 +61,7 @@ passport.use(strategy);
 
 // API Should be listening on 2000 at all times
 app.listen(2000);
+http.listen(2001);
 
 /**
  * app post.
@@ -83,11 +87,37 @@ app.post('/login', (req, res) => {
                 })
             }
         })
+    } else {
+        res.send({
+            message: 'bad',
+            error: 'Username or Password not found.'
+        })
     }
 });
 
-app.get('/secret', passport.authenticate('jwt', {session: false}), (req, res) => {
+app.get('/dashboard', passport.authenticate('jwt', {session: false}), (req, res) => {
     res.send('Success');
+});
+
+// Users
+app.get('/userList', passport.authenticate('jwt', {session: false}), (req, res) => {
+    administration.getUserList().then((_res) => {
+        res.send(_res);
+    });
+});
+
+app.post('/registerUser', passport.authenticate('jwt', {session: false}), (req, res) => {
+
+    let email = req.body.email;
+    let password = req.body.password;
+
+    if (email && password) {
+        auth.registerUser(email, password).then((_res) => {
+            res.send(_res)
+        })
+    } else {
+        res.send("Something went wrong...")
+    }
 });
 
 /**

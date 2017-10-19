@@ -29,14 +29,6 @@ function createAccount() {
     });
 }
 
-// encryptPassword();
-
-function encryptPassword() {
-    auth.encryptPassword('lala').then(function (res) {
-        console.log(res);
-    });
-}
-
 // loginUser();
 
 function loginUser() {

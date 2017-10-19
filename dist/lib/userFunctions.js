@@ -6,21 +6,21 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _db = require('../lib/db');
-
-var _db2 = _interopRequireDefault(_db);
-
 var _bluebird = require('bluebird');
 
 var _bluebird2 = _interopRequireDefault(_bluebird);
 
-var _bcrypt = require('bcrypt');
+var _baseUserFunctions2 = require('./baseUserFunctions');
 
-var _bcrypt2 = _interopRequireDefault(_bcrypt);
+var _baseUserFunctions3 = _interopRequireDefault(_baseUserFunctions2);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /**
  * Payload Numbering
@@ -30,9 +30,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * 10 Account Creation
  * 11 Successful Login
  */
-var authentication = function () {
+var authentication = function (_baseUserFunctions) {
+    _inherits(authentication, _baseUserFunctions);
+
     function authentication() {
         _classCallCheck(this, authentication);
+
+        return _possibleConstructorReturn(this, (authentication.__proto__ || Object.getPrototypeOf(authentication)).call(this));
     }
 
     /**
@@ -51,13 +55,13 @@ var authentication = function () {
     _createClass(authentication, [{
         key: 'registerUser',
         value: function registerUser(email, password) {
-            var _this = this;
+            var _this2 = this;
 
-            return this.checkForDuplicateAccount(email).then(function (res) {
+            return this.checkForDuplicateAccount(email.toLowerCase()).then(function (res) {
                 if (res.payload === 0) {
                     if (password.length >= 6) {
-                        return _this.encryptPassword(password).then(function (pass) {
-                            return _this.createAccount(email, pass).then(function () {
+                        return _this2.encryptPassword(password).then(function (pass) {
+                            return _this2.createAccount(email.toLowerCase(), pass).then(function () {
                                 return {
                                     msg: 'New Account Created.',
                                     payload: res.payload
@@ -66,7 +70,7 @@ var authentication = function () {
                         });
                     } else {
                         return {
-                            msg: res.msg
+                            msg: 'Password not long enough'
                         };
                     }
                 } else {
@@ -92,137 +96,10 @@ var authentication = function () {
                 return res;
             });
         }
-    }, {
-        key: 'validateUser',
-        value: function validateUser(email, password) {
-            var _this2 = this;
-
-            return _bluebird2.default.using((0, _db2.default)(), function (connection) {
-                return connection.query('Select id, userName, Password FROM `accounts` Where userName=?', [email]).then(function (_res) {
-                    // Check if we have that account.
-                    if (_res.length > 0) {
-                        return _this2.comparePasswords(_res[0].Password, password).then(function (res) {
-                            if (res) {
-                                return {
-                                    msg: 'Success',
-                                    payload: 11,
-                                    user: {
-                                        id: _res[0].id
-                                    }
-                                };
-                            } else {
-                                return {
-                                    msg: 'Fail',
-                                    payload: 1
-                                };
-                            }
-                        });
-                    } else {
-                        return {
-                            msg: 'Fail',
-                            payload: 1
-                        };
-                    }
-                });
-            });
-        }
-
-        /**
-         * This does a simple bcrypt comparision to identify correctness.
-         * @param hash
-         * @param plainText
-         */
-
-    }, {
-        key: 'comparePasswords',
-        value: function comparePasswords(hash, plainText) {
-            return _bcrypt2.default.compare(plainText, hash).then(function (res) {
-                return res === true;
-            });
-        }
-
-        /**
-         * This checks for a duplicate account inside the database.
-         * Payload is a boolean Int
-         */
-
-    }, {
-        key: 'checkForDuplicateAccount',
-        value: function checkForDuplicateAccount(email) {
-            return _bluebird2.default.using((0, _db2.default)(), function (connection) {
-                return connection.query('SELECT `userName` FROM `accounts` WHERE userName=?', [email]).then(function (res) {
-                    if (res.length === 0) {
-                        return {
-                            msg: 'Success',
-                            payload: 0
-                        };
-                    } else {
-                        return {
-                            msg: 'Fail - Duplicate Account',
-                            payload: 1
-                        };
-                    }
-                }).catch(function (e) {
-                    console.log(e);
-                });
-            });
-        }
-
-        /**
-         * Find Account by Id
-         */
-
-    }, {
-        key: 'findAccountById',
-        value: function findAccountById(id) {
-            return _bluebird2.default.using((0, _db2.default)(), function (connection) {
-                return connection.query('SELECT `id` FROM `accounts` WHERE id=?', [id]).then(function (res) {
-                    if (res.length > 0) {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                });
-            });
-        }
-
-        /**
-         * This is the last part of the system.
-         * All passwords should be ran through bcrypt before being inserted.
-         * @param email
-         * @param password
-         */
-
-    }, {
-        key: 'createAccount',
-        value: function createAccount(email, password) {
-            return _bluebird2.default.using((0, _db2.default)(), function (connection) {
-                return connection.query('INSERT INTO `accounts` (userName, Password) VALUES (?, ?)', [email, password]).then(function (res) {
-                    return { msg: 'Success', payload: 10 };
-                });
-            }).catch(function (e) {
-                console.log(e);
-            });
-        }
-
-        /**
-         * Encrypts plain text passwords using a safe encryption method.
-         * @param password
-         */
-
-    }, {
-        key: 'encryptPassword',
-        value: function encryptPassword(password) {
-            var saltRounds = 10;
-
-            return _bcrypt2.default.hash(password, saltRounds).then(function (hash) {
-                return hash;
-            });
-        }
     }]);
 
     return authentication;
-}();
+}(_baseUserFunctions3.default);
 
 exports.default = authentication;
 //# sourceMappingURL=userFunctions.js.map
